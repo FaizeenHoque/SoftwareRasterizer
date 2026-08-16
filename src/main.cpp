@@ -1,9 +1,11 @@
+#include <algorithm>
 #include <cstdio>
 #include <fstream>
 #include <vector>
 #include <string>
 #include <cstdint>
 #include <filesystem>
+#include <cmath>
 
 const int width = 64;
 const int height = 64;
@@ -145,19 +147,28 @@ void Render(
 	const std::vector<float3>& triangleCols,
 	std::vector<std::vector<float3>>& image
 ) {
-	for (int y = 0; y < image[0].size(); ++y) {
-		for (int x = 0; x < image.size(); ++x) {
-			for (int i = 0; i < points.size(); i += 3) {
+	for (int i = 0; i < points.size(); i += 3) {
+		float2 a = points[i];
+		float2 b = points[i + 1];
+		float2 c = points[i + 2];
 
-				float2 a = points[i + 0];
-				float2 b = points[i + 1];
-				float2 c = points[i + 2];
+		float minX = std::min(std::min(a.x, b.x), c.x);
+		float minY = std::min(std::min(a.y, b.y), c.y);
+		float maxX = std::max(std::max(a.x, b.x), c.x);
+		float maxY = std::max(std::max(a.y, b.y), c.y);
 
-				float2 p(x, y);
+		int blockStartX = std::clamp((int)minX, 0, (int)image.size() - 1);
+		int blockStartY = std::clamp((int)minY, 0, (int)image[0].size() - 1);
+		int blockEndX = std::clamp((int)std::ceil(maxX), 0, (int)image.size() - 1);
+		int blockEndY = std::clamp((int)std::ceil(maxY), 0, (int)image[0].size() - 1);
 
-				if (PointInTriangle(a, b, c, p)) {
-					image[x][y] = triangleCols[i / 3];
+		for (int y = blockStartY; y <= blockEndY; ++y) {
+			for (int x = blockStartX; x <= blockEndX; ++x) {
+				if (!PointInTriangle(a, b, c, float2(x, y))) {
+					continue;
 				}
+
+				image[x][y] = triangleCols[i / 3];
 			}
 		}
 	}
