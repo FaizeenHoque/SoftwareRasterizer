@@ -5,8 +5,8 @@
 #include <cstdint>
 #include <filesystem>
 
-const int width = 1080;
-const int height = 1080;
+const int width = 64;
+const int height = 64;
 
 struct float3 {
 	float x, y, z;
@@ -140,22 +140,27 @@ static void WriteImageToFile(const std::vector<std::vector<float3>>& image, cons
 	}
 }
 
-void Render() {
-	std::vector image(width, std::vector<float3>(height));
+void Render(
+	const std::vector<float2>& points,
+	const std::vector<float3>& triangleCols,
+	std::vector<std::vector<float3>>& image
+) {
+	for (int y = 0; y < image[0].size(); ++y) {
+		for (int x = 0; x < image.size(); ++x) {
+			for (int i = 0; i < points.size(); i += 3) {
 
-	float2 a(0.2f * width, 0.2f * height);
-	float2 b(0.7f * width, 0.4f * height);
-	float2 c(0.4f * width, 0.8f * height);
+				float2 a = points[i + 0];
+				float2 b = points[i + 1];
+				float2 c = points[i + 2];
 
-	for (int y = 0; y < height; ++y) {
-		for (int x = 0; x < width; ++x) {
-			float2 p(x, y);
-			bool inside = PointInTriangle(a, b, c, p);
-			if (inside) { image[x][y] = float3(0, 0, 1); }
+				float2 p(x, y);
+
+				if (PointInTriangle(a, b, c, p)) {
+					image[x][y] = triangleCols[i / 3];
+				}
+			}
 		}
 	}
-
-	WriteImageToFile(image, "art.bmp");
 }
 
 void CreateTestImages() {
@@ -163,8 +168,7 @@ void CreateTestImages() {
 
 	for (int currentFrame = 0; currentFrame < 5; ++currentFrame) {
 		std::vector image(width, std::vector<float3>(height));
-
-		trianglePosition.x *= 3;
+		trianglePosition.x += 10;
 
 		float2 a(0.2f * width, 0.2f * height);
 		float2 b(0.7f * width, 0.4f * height);
@@ -174,23 +178,23 @@ void CreateTestImages() {
 		b += trianglePosition;
 		c += trianglePosition;
 
-		for (int y = 0; y < height; ++y) {
-			for (int x = 0; x < width; ++x) {
-				float2 p(x, y);
-				bool inside = PointInTriangle(a, b, c, p);
-				if (inside) { image[x][y] = float3(0, 0, 1); }
-			}
-		}
+		std::vector<float2> points = {
+			a, b, c
+		};
 
-		printf("Rendered frame: %d\n", currentFrame);
-		std::string filename = "frame_"+std::to_string(currentFrame)+".bmp";
+		std::vector<float3> triangleCols = {
+			float3(0, 0, 1)
+		};
+
+		Render(points, triangleCols, image);
+
+		std::string filename =
+			"frame_" + std::to_string(currentFrame) + ".bmp";
+
 		WriteImageToFile(image, filename);
 	}
 }
 
-void Render() {
-
-}
 
 int main() {
 	CreateTestImages();
