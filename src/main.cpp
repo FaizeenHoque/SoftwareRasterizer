@@ -13,11 +13,29 @@ struct float3 {
 
 	float3(float x, float y, float z)
 		: x(x), y(y), z(z), r(x), g(y), b(z) {}
+
+	float3 operator-(const float3& other) const {
+		return float3(x - other.x, y - other.y, z-other.z);
+	}
+};
+struct float2 {
+	float x, y;
+
+	float2() = default;
+	float2(float x, float y)
+		: x(x), y(y) {}
+
+	float2 operator-(const float2& other) const {
+		return float2(x - other.x, y - other.y);
+	}
 };
 
 static std::string GetFilePath(const std::string& fileName);
 static void WriteImageToFile(const std::vector<std::vector<float3>>& image, const std::string& name);
-
+bool PointInTriangle(float2 a, float2 b, float2 c, float2 p);
+bool PointOnRightSideOfLine(float2 a, float2 b, float2 p);
+float Dot(float2 a, float2 b);
+float2 Perpendicular(float2 vec);
 void CreateTestImage();
 
 int main() {
@@ -25,21 +43,43 @@ int main() {
 }
 
 void CreateTestImage() {
-	const int width = 64;
-	const int height = 64;
+	const int width = 1080;
+	const int height = 1080;
 	std::vector<std::vector<float3>> image(width, std::vector<float3>(height));
+
+	float2 a(0.2f * width, 0.2f * height);
+	float2 b(0.7f * width, 0.4f * height);
+	float2 c(0.4f * width, 0.8f * height);
 
 	for (int y = 0; y < height; ++y) {
 		for (int x = 0; x < width; ++x) {
-			float r = (float)x / (width - 1);
-			float g = (float)y / (height - 1);
-			image[x][y] = float3(r, g, 0);
+			float2 p(x, y);
+			bool inside = PointInTriangle(a, b, c, p);
+			if (inside) { image[x][y] = float3(0, 0, 1); }
 		}
 	}
 
 	WriteImageToFile(image, "art");
 }
 
+float Dot(float2 a, float2 b) {
+	return a.x * b.x + a.y * b.y;
+}
+float2 Perpendicular(float2 vec) {
+	return float2(vec.y, -vec.x);
+}
+bool PointOnRightSideOfLine(float2 a, float2 b, float2 p) {
+	float2 ab = b - a;
+	float2 abPerp = Perpendicular(ab);
+	float2 ap = p - a;
+	return Dot(ap, abPerp) >= 0;
+}
+bool PointInTriangle(float2 a, float2 b, float2 c, float2 p) {
+	bool sideAB = PointOnRightSideOfLine(a, b, p);
+	bool sideBC = PointOnRightSideOfLine(b, c, p);
+	bool sideAC = PointOnRightSideOfLine(c, a, p);
+	return sideAB == sideBC && sideBC == sideAC;
+}
 static std::string GetFilePath(const std::string& fileName) {
 	std::filesystem::path outputDir = "Output";
 
@@ -50,7 +90,7 @@ static std::string GetFilePath(const std::string& fileName) {
 	return (outputDir / fileName).string();
 }
 static void WriteImageToFile(const std::vector<std::vector<float3>>& image, const std::string& name) {
-	std::ofstream writer(GetFilePath(name + ".txt"), std::ios::binary);
+	std::ofstream writer(GetFilePath(name + ".bmp"), std::ios::binary);
 
 	uint32_t width = (uint32_t)image.size();
 	uint32_t height = (uint32_t)image[0].size();
